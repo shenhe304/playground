@@ -1,369 +1,222 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import type { TemplateId, InvitationData } from '../lib/types';
+import { TEMPLATES } from '../lib/types';
 import InvitationPreview from '../components/InvitationPreview';
-import { InviteData, TemplateId } from '../lib/types';
-
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-}
-
-const templateLabels: Record<TemplateId, string> = {
-  bloom: 'Bloom',
-  confetti: 'Confetti',
-  'golden-hour': 'Golden Hour',
-};
 
 export default function Create() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const templateParam = searchParams.get('template') as TemplateId | null;
-  const validTemplate: TemplateId = templateParam && ['bloom', 'confetti', 'golden-hour'].includes(templateParam)
-    ? templateParam
-    : 'bloom';
+  const defaultTemplate = (searchParams.get('template') as TemplateId) || 'bloom';
 
-  const [data, setData] = useState<InviteData>({
-    id: generateId(),
-    templateId: validTemplate,
-    groomName: '',
-    brideName: '',
+  const [data, setData] = useState<InvitationData>({
+    template: defaultTemplate,
+    partnerA: '',
+    partnerB: '',
     date: '',
     time: '',
     venue: '',
-    photo: undefined,
+    photoUrl: undefined,
   });
 
-  useEffect(() => {
-    setData((prev) => ({ ...prev, templateId: validTemplate }));
-  }, [validTemplate]);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
-  const update = (field: keyof InviteData, value: string) => {
-    setData((prev) => ({ ...prev, [field]: value }));
+  useEffect(() => {
+    const t = searchParams.get('template') as TemplateId;
+    if (t && TEMPLATES.find((x) => x.id === t)) {
+      setData((d) => ({ ...d, template: t }));
+    }
+  }, [searchParams]);
+
+  const handleChange = (field: keyof InvitationData, value: string) => {
+    setData((d) => ({ ...d, [field]: value }));
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setData((prev) => ({ ...prev, photo: ev.target?.result as string }));
+      const url = ev.target?.result as string;
+      setPhotoPreview(url);
+      setData((d) => ({ ...d, photoUrl: url }));
     };
     reader.readAsDataURL(file);
   };
 
-  const handlePublish = () => {
-    // Save to localStorage
-    const invites = JSON.parse(localStorage.getItem('wedding-invites') || '{}');
-    invites[data.id] = data;
-    localStorage.setItem('wedding-invites', JSON.stringify(invites));
-    navigate(`/invite/${data.id}`);
+  const handleCreate = () => {
+    // Encode invitation data in URL (no backend needed for basic sharing)
+    const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
+    navigate(`/invite/${encoded}`);
   };
 
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontFamily: 'var(--font-sans)',
-    fontSize: '12px',
-    fontWeight: 600,
-    letterSpacing: '0.1em',
-    textTransform: 'uppercase',
-    color: 'var(--color-primary)',
-    marginBottom: '8px',
-  };
+  const currentTemplate = TEMPLATES.find((t) => t.id === data.template)!;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-surface)' }}>
-      {/* Top bar */}
-      <div
-        style={{
-          background: 'rgba(247,246,243,0.85)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: 'none',
-          padding: '16px 32px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          boxShadow: 'var(--shadow-lift)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              background: 'var(--color-surface-highest)',
-              border: 'none',
-              borderRadius: '20px',
-              padding: '8px 18px',
-              fontFamily: 'var(--font-sans)',
-              fontSize: '14px',
-              fontWeight: 500,
-              color: 'var(--color-on-surface)',
-              cursor: 'pointer',
-            }}
-          >
-            ← Back
-          </button>
-          <span
-            style={{
-              fontFamily: 'var(--font-serif)',
-              fontSize: '18px',
-              color: 'var(--color-on-surface)',
-            }}
-          >
-            Customize: <span style={{ color: 'var(--color-primary)' }}>{templateLabels[data.templateId]}</span>
-          </span>
-        </div>
-
-        <button className="btn-primary" onClick={handlePublish}>
-          Create Invitation
-        </button>
-      </div>
-
-      {/* Main layout */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-          gap: '0',
-          maxWidth: '1400px',
-          margin: '0 auto',
-          minHeight: 'calc(100vh - 70px)',
-        }}
-      >
-        {/* Form panel */}
-        <div
-          style={{
-            padding: '40px 32px',
-            overflowY: 'auto',
-            background: 'var(--color-surface-lowest)',
-            boxShadow: '4px 0 24px rgba(46,47,45,0.04)',
-          }}
-        >
-          <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            <div>
-              <h2
-                style={{
-                  fontFamily: 'var(--font-serif)',
-                  fontSize: '28px',
-                  fontWeight: 700,
-                  color: 'var(--color-on-surface)',
-                  marginBottom: '8px',
-                }}
-              >
-                Your Details
-              </h2>
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: 'var(--color-neutral)', lineHeight: 1.6 }}>
-                Fill in your information and watch the invitation come to life.
-              </p>
-            </div>
-
-            {/* Template switcher */}
-            <div>
-              <span style={labelStyle}>Template</span>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {(['bloom', 'confetti', 'golden-hour'] as TemplateId[]).map((tid) => (
-                  <button
-                    key={tid}
-                    onClick={() => update('templateId', tid)}
-                    style={{
-                      padding: '8px 18px',
-                      borderRadius: '20px',
-                      border: 'none',
-                      background: data.templateId === tid ? 'var(--color-primary)' : 'var(--color-surface-highest)',
-                      color: data.templateId === tid ? 'white' : 'var(--color-on-surface)',
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    {templateLabels[tid]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Names */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label style={labelStyle}>Partner A / Groom's Name</label>
-                <input
-                  className="input-field"
-                  type="text"
-                  placeholder="e.g. Alexander"
-                  value={data.groomName}
-                  onChange={(e) => update('groomName', e.target.value)}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Partner B / Bride's Name</label>
-                <input
-                  className="input-field"
-                  type="text"
-                  placeholder="e.g. Sophia"
-                  value={data.brideName}
-                  onChange={(e) => update('brideName', e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Date & Time */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                <label style={labelStyle}>Wedding Date</label>
-                <input
-                  className="input-field"
-                  type="date"
-                  value={data.date}
-                  onChange={(e) => update('date', e.target.value)}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Time</label>
-                <input
-                  className="input-field"
-                  type="time"
-                  value={data.time}
-                  onChange={(e) => update('time', e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Venue */}
-            <div>
-              <label style={labelStyle}>Venue Name</label>
-              <input
-                className="input-field"
-                type="text"
-                placeholder="e.g. The Grand Garden Estate"
-                value={data.venue}
-                onChange={(e) => update('venue', e.target.value)}
-              />
-            </div>
-
-            {/* Photo upload */}
-            <div>
-              <label style={labelStyle}>Couple Photo</label>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '20px',
-                  padding: '20px',
-                  background: 'var(--color-surface-low)',
-                  borderRadius: '20px',
-                }}
-              >
-                {data.photo ? (
-                  <div
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      flexShrink: 0,
-                      border: '3px solid var(--color-tertiary)',
-                    }}
-                  >
-                    <img
-                      src={data.photo}
-                      alt="Couple"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      borderRadius: '50%',
-                      background: 'var(--color-surface-highest)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="8" r="4" fill="rgba(173,173,171,0.5)" />
-                      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="rgba(173,173,171,0.5)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-                    </svg>
-                  </div>
-                )}
-                <div>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    style={{ padding: '10px 20px', fontSize: '13px' }}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {data.photo ? 'Change Photo' : 'Upload Photo'}
-                  </button>
-                  {data.photo && (
-                    <button
-                      type="button"
-                      style={{
-                        display: 'block',
-                        marginTop: '8px',
-                        background: 'none',
-                        border: 'none',
-                        fontFamily: 'var(--font-sans)',
-                        fontSize: '12px',
-                        color: 'var(--color-neutral)',
-                        cursor: 'pointer',
-                        padding: 0,
-                      }}
-                      onClick={() => setData((prev) => ({ ...prev, photo: undefined }))}
-                    >
-                      Remove photo
-                    </button>
-                  )}
-                </div>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={handlePhotoUpload}
-              />
-            </div>
-
-            <button className="btn-primary" onClick={handlePublish} style={{ width: '100%' }}>
+    <div className="min-h-dvh bg-stone-50">
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-stone-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+          <Link to="/" className="script-font text-2xl text-rose-400">Everly</Link>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:block text-sm text-stone-400">
+              Template: <span className="font-medium text-stone-700">{currentTemplate?.name}</span>
+            </span>
+            <button
+              onClick={handleCreate}
+              disabled={!data.partnerA || !data.partnerB}
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
               Create Invitation →
             </button>
           </div>
         </div>
+      </header>
 
-        {/* Live preview panel */}
-        <div
-          style={{
-            padding: '40px 32px',
-            background: 'var(--color-surface)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
-          <p
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: '11px',
-              fontWeight: 600,
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase',
-              color: 'var(--color-neutral)',
-              marginBottom: '24px',
-            }}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+
+        {/* Left: Form */}
+        <div className="flex flex-col gap-6">
+          <div>
+            <h1 className="serif-font text-2xl font-light text-stone-800 mb-1">Customize your invitation</h1>
+            <p className="text-sm text-stone-400">Changes appear in the preview instantly.</p>
+          </div>
+
+          {/* Template selector */}
+          <div className="card p-5">
+            <label className="label">Choose template</label>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => handleChange('template', t.id)}
+                  className={`relative p-3 rounded-xl border-2 text-xs font-medium transition-all duration-150 ${
+                    data.template === t.id
+                      ? 'border-rose-400 bg-rose-50 text-rose-600'
+                      : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300'
+                  }`}
+                >
+                  <div
+                    className="w-6 h-6 rounded-full mx-auto mb-1.5"
+                    style={{ background: t.accent }}
+                  />
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Names */}
+          <div className="card p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-stone-700">The happy couple</h2>
+            <div>
+              <label className="label">Partner A name *</label>
+              <input
+                className="input-field"
+                placeholder="e.g. Sophie"
+                value={data.partnerA}
+                onChange={(e) => handleChange('partnerA', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Partner B name *</label>
+              <input
+                className="input-field"
+                placeholder="e.g. James"
+                value={data.partnerB}
+                onChange={(e) => handleChange('partnerB', e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Date & Time */}
+          <div className="card p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-stone-700">When &amp; where</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Date</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={data.date}
+                  onChange={(e) => handleChange('date', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label">Time</label>
+                <input
+                  type="time"
+                  className="input-field"
+                  value={data.time}
+                  onChange={(e) => handleChange('time', e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="label">Venue</label>
+              <input
+                className="input-field"
+                placeholder="e.g. The Garden Estate, Malibu"
+                value={data.venue}
+                onChange={(e) => handleChange('venue', e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Photo */}
+          <div className="card p-5">
+            <h2 className="text-sm font-semibold text-stone-700 mb-4">Couple photo (optional)</h2>
+            <div className="flex items-center gap-4">
+              {photoPreview ? (
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-rose-200 flex-shrink-0">
+                  <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-stone-100 border-2 border-dashed border-stone-300 flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">📸</span>
+                </div>
+              )}
+              <div>
+                <button
+                  className="btn-secondary text-xs"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {photoPreview ? 'Change photo' : 'Upload photo'}
+                </button>
+                <p className="text-xs text-stone-400 mt-1">JPG, PNG or WebP, max 5MB</p>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhoto}
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleCreate}
+            disabled={!data.partnerA || !data.partnerB}
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed w-full py-4 text-base"
           >
-            Live Preview
-          </p>
-          <div style={{ width: '100%', maxWidth: '520px' }}>
-            <InvitationPreview data={data} />
+            Create my invitation ✨
+          </button>
+        </div>
+
+        {/* Right: Live Preview */}
+        <div className="lg:sticky lg:top-24">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-widest">Live preview</p>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-xs text-stone-400">Updates as you type</span>
+            </div>
+          </div>
+          <div className="max-w-sm mx-auto">
+            <InvitationPreview data={data} compact={false} />
           </div>
         </div>
       </div>

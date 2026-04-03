@@ -1,94 +1,84 @@
-import { TemplateId, InviteData } from '../lib/types';
-import Bloom from '../templates/Bloom';
-import Confetti from '../templates/Confetti';
-import GoldenHour from '../templates/GoldenHour';
+import { useNavigate } from 'react-router-dom';
+import type { TemplateConfig } from '../lib/types';
+import InvitationPreview from './InvitationPreview';
 
 interface TemplateCardProps {
-  templateId: TemplateId;
-  name: string;
-  description: string;
-  onSelect: (id: TemplateId) => void;
+  template: TemplateConfig;
 }
 
-const sampleData: InviteData = {
-  id: 'preview',
-  templateId: 'bloom',
-  groomName: 'Alexander',
-  brideName: 'Sophia',
-  date: '2025-06-14',
-  time: '4:00 PM',
-  venue: 'The Grand Garden Estate',
+const PREVIEW_DATA = {
+  bloom: {
+    template: 'bloom' as const,
+    partnerA: 'Sophie',
+    partnerB: 'James',
+    date: '2025-06-14',
+    time: '4:00 PM',
+    venue: 'The Garden Estate, Malibu',
+  },
+  confetti: {
+    template: 'confetti' as const,
+    partnerA: 'Lily',
+    partnerB: 'Marco',
+    date: '2025-08-02',
+    time: '5:30 PM',
+    venue: 'Rooftop at The Grand, NYC',
+  },
+  'golden-hour': {
+    template: 'golden-hour' as const,
+    partnerA: 'Clara',
+    partnerB: 'William',
+    date: '2025-09-20',
+    time: '6:00 PM',
+    venue: 'Château Lumière, Napa Valley',
+  },
 };
 
-export default function TemplateCard({ templateId, name, description, onSelect }: TemplateCardProps) {
-  const preview = { ...sampleData, templateId };
+export default function TemplateCard({ template }: TemplateCardProps) {
+  const navigate = useNavigate();
+
+  const handleSelect = () => {
+    navigate(`/create?template=${template.id}`);
+  };
 
   return (
     <div
-      style={{
-        background: 'var(--color-surface-lowest)',
-        borderRadius: '32px',
-        overflow: 'hidden',
-        boxShadow: 'var(--shadow-float)',
-        cursor: 'pointer',
-        transition: 'transform 0.25s ease, box-shadow 0.25s ease',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-      className="template-card"
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-8px)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 20px 60px 0 rgba(46,47,45,0.1)';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-float)';
-      }}
+      className="group flex flex-col bg-white rounded-3xl overflow-hidden shadow-sm border border-stone-100 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer"
+      onClick={handleSelect}
     >
-      {/* Preview thumbnail */}
-      <div
-        style={{
-          padding: '24px 24px 0',
-          background: 'var(--color-surface-low)',
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-      >
-        {templateId === 'bloom' && <Bloom data={preview} mini />}
-        {templateId === 'confetti' && <Confetti data={preview} mini />}
-        {templateId === 'golden-hour' && <GoldenHour data={preview} mini />}
+      {/* Mini preview */}
+      <div className="relative overflow-hidden" style={{ height: 280 }}>
+        <div className="absolute inset-0 scale-100">
+          <InvitationPreview
+            data={PREVIEW_DATA[template.id]}
+            compact
+            className="!rounded-none !shadow-none w-full h-full"
+          />
+        </div>
       </div>
 
       {/* Card info */}
-      <div style={{ padding: '24px 28px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="p-5 flex flex-col gap-3">
         <div>
-          <h3
-            style={{
-              fontFamily: 'var(--font-serif)',
-              fontSize: '22px',
-              fontWeight: 700,
-              color: 'var(--color-on-surface)',
-              marginBottom: '6px',
-            }}
-          >
-            {name}
-          </h3>
-          <p
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: '14px',
-              color: 'var(--color-neutral)',
-              lineHeight: 1.5,
-            }}
-          >
-            {description}
-          </p>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-base font-semibold text-stone-800">{template.name}</h3>
+            <span
+              className="text-xs font-medium px-2.5 py-0.5 rounded-full"
+              style={{ background: template.bg, color: template.accent }}
+            >
+              {template.tagline}
+            </span>
+          </div>
+          <p className="text-sm text-stone-400 leading-snug">{template.description}</p>
         </div>
 
         <button
-          className="btn-primary"
-          style={{ marginTop: 'auto', width: '100%' }}
-          onClick={() => onSelect(templateId)}
+          className="w-full py-2.5 rounded-2xl text-sm font-semibold tracking-wide transition-all duration-200"
+          style={{
+            background: `linear-gradient(135deg, ${template.accent}dd, ${template.accent})`,
+            color: 'white',
+            boxShadow: `0 4px 14px 0 ${template.accent}44`,
+          }}
+          onClick={(e) => { e.stopPropagation(); handleSelect(); }}
         >
           Use this template
         </button>

@@ -1,305 +1,168 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { RSVPResponse } from '../lib/types';
-import { useNavigate } from 'react-router-dom';
+import type { RSVPResponse } from '../lib/types';
 
-const attendanceColors: Record<string, string> = {
-  yes: '#c8e6c9',
-  no: '#fecbcb',
-  maybe: '#e8dff0',
-};
-
-const attendanceLabels: Record<string, string> = {
-  yes: 'Attending',
-  no: 'Not Attending',
-  maybe: 'Maybe',
+const ATTENDANCE_STYLES: Record<string, { label: string; color: string; bg: string; emoji: string }> = {
+  yes: { label: 'Attending', color: '#10b981', bg: '#ecfdf5', emoji: '🎉' },
+  maybe: { label: 'Maybe', color: '#f59e0b', bg: '#fffbeb', emoji: '🤞' },
+  no: { label: 'Declining', color: '#f43f5e', bg: '#fff1f2', emoji: '💌' },
 };
 
 export default function Dashboard() {
   const [responses, setResponses] = useState<RSVPResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchResponses = async () => {
+    async function fetchResponses() {
       setLoading(true);
+      setError(null);
       try {
-        const { data, error: supaErr } = await supabase
+        const { data, error: sbError } = await supabase
           .from('rsvp_responses')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (supaErr) {
-          setError('Could not load responses. Make sure Supabase is configured.');
-        } else {
-          setResponses(data || []);
-        }
-      } catch {
-        setError('Could not connect to the database.');
+        if (sbError) throw sbError;
+        setResponses(data || []);
+      } catch (err) {
+        console.error('Dashboard fetch error:', err);
+        setError('Could not load RSVP responses. Check your Supabase configuration.');
       } finally {
         setLoading(false);
       }
-    };
+    }
 
     fetchResponses();
   }, []);
 
   const counts = {
     yes: responses.filter((r) => r.attendance === 'yes').length,
-    no: responses.filter((r) => r.attendance === 'no').length,
     maybe: responses.filter((r) => r.attendance === 'maybe').length,
+    no: responses.filter((r) => r.attendance === 'no').length,
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'var(--color-surface)',
-        padding: '48px 24px 80px',
-      }}
-    >
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        {/* Header */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            marginBottom: '48px',
-            flexWrap: 'wrap',
-            gap: '16px',
-          }}
-        >
-          <div>
-            <p
-              style={{
-                fontFamily: 'var(--font-sans)',
-                fontSize: '11px',
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                color: 'var(--color-primary)',
-                marginBottom: '8px',
-                fontWeight: 600,
-              }}
-            >
-              Dashboard
-            </p>
-            <h1
-              style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: '40px',
-                fontWeight: 700,
-                color: 'var(--color-on-surface)',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              RSVP Responses
-            </h1>
-          </div>
-          <button className="btn-primary" onClick={() => navigate('/')}>
-            + New Invitation
-          </button>
+    <div className="min-h-dvh bg-stone-50">
+      {/* Header */}
+      <header className="bg-white border-b border-stone-100">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+          <Link to="/" className="script-font text-2xl text-rose-400">Everly</Link>
+          <Link to="/" className="btn-secondary text-sm">
+            ← Back to templates
+          </Link>
+        </div>
+      </header>
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        {/* Page title */}
+        <div className="mb-8">
+          <h1 className="serif-font text-3xl font-light text-stone-800 mb-1">RSVP Dashboard</h1>
+          <p className="text-stone-400 text-sm">All responses from your guests</p>
         </div>
 
         {/* Stats */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '16px',
-            marginBottom: '40px',
-          }}
-        >
-          {(['yes', 'no', 'maybe'] as const).map((key) => (
-            <div
-              key={key}
-              style={{
-                background: 'var(--color-surface-lowest)',
-                borderRadius: '24px',
-                padding: '24px',
-                boxShadow: 'var(--shadow-lift)',
-                textAlign: 'center',
-              }}
-            >
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  background: attendanceColors[key],
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 12px',
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  fontFamily: 'var(--font-sans)',
-                  color: 'var(--color-on-surface)',
-                }}
-              >
-                {counts[key]}
-              </div>
-              <p
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: 'var(--color-neutral)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                {attendanceLabels[key]}
-              </p>
+        {!loading && !error && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            <div className="card p-4 text-center">
+              <p className="text-2xl font-bold text-stone-800">{responses.length}</p>
+              <p className="text-xs text-stone-400 mt-0.5 uppercase tracking-wide">Total RSVPs</p>
             </div>
-          ))}
-        </div>
-
-        {/* Table */}
-        <div
-          style={{
-            background: 'var(--color-surface-lowest)',
-            borderRadius: '32px',
-            overflow: 'hidden',
-            boxShadow: 'var(--shadow-float)',
-          }}
-        >
-          {/* Table header */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '2fr 1.2fr 2fr 1.5fr',
-              padding: '20px 28px',
-              background: 'var(--color-surface-low)',
-              gap: '16px',
-            }}
-          >
-            {['Name', 'Attendance', 'Message', 'Submitted'].map((col) => (
-              <span
-                key={col}
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: 'var(--color-neutral)',
-                }}
-              >
-                {col}
-              </span>
-            ))}
+            {(['yes', 'maybe', 'no'] as const).map((key) => {
+              const s = ATTENDANCE_STYLES[key];
+              return (
+                <div key={key} className="card p-4 text-center" style={{ background: s.bg }}>
+                  <p className="text-2xl font-bold" style={{ color: s.color }}>{counts[key]}</p>
+                  <p className="text-xs mt-0.5 uppercase tracking-wide" style={{ color: s.color, opacity: 0.7 }}>
+                    {s.emoji} {s.label}
+                  </p>
+                </div>
+              );
+            })}
           </div>
+        )}
 
-          {loading && (
-            <div style={{ padding: '48px', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-sans)', color: 'var(--color-neutral)', fontSize: '15px' }}>
-                Loading responses...
-              </p>
+        {/* Content */}
+        {loading ? (
+          <div className="card p-12 text-center">
+            <div className="w-8 h-8 border-2 border-rose-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-stone-400 text-sm">Loading responses...</p>
+          </div>
+        ) : error ? (
+          <div className="card p-8 text-center">
+            <span className="text-4xl mb-3 block">⚠️</span>
+            <p className="text-stone-700 font-medium mb-1">Could not load responses</p>
+            <p className="text-stone-400 text-sm">{error}</p>
+          </div>
+        ) : responses.length === 0 ? (
+          <div className="card p-12 text-center">
+            <span className="text-5xl mb-4 block">💌</span>
+            <h2 className="serif-font text-xl text-stone-700 mb-2">No RSVPs yet</h2>
+            <p className="text-stone-400 text-sm">
+              Share your invitation link and RSVPs will appear here.
+            </p>
+            <Link to="/" className="btn-primary mt-6 text-sm inline-flex">
+              Create an invitation
+            </Link>
+          </div>
+        ) : (
+          <div className="card overflow-hidden">
+            {/* Table header */}
+            <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 bg-stone-50 border-b border-stone-100 text-xs font-medium text-stone-400 uppercase tracking-wider">
+              <div className="col-span-3">Guest</div>
+              <div className="col-span-2">Attendance</div>
+              <div className="col-span-5">Message</div>
+              <div className="col-span-2">Date</div>
             </div>
-          )}
 
-          {error && (
-            <div style={{ padding: '48px', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-sans)', color: 'var(--color-primary)', fontSize: '15px' }}>
-                {error}
-              </p>
-              <p style={{ fontFamily: 'var(--font-sans)', color: 'var(--color-neutral)', fontSize: '13px', marginTop: '8px' }}>
-                Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.
-              </p>
+            {/* Table rows */}
+            <div className="divide-y divide-stone-100">
+              {responses.map((r) => {
+                const s = ATTENDANCE_STYLES[r.attendance] || ATTENDANCE_STYLES.maybe;
+                const date = r.created_at ? new Date(r.created_at) : null;
+
+                return (
+                  <div
+                    key={r.id}
+                    className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 px-6 py-4 hover:bg-stone-50/60 transition-colors"
+                  >
+                    {/* Name */}
+                    <div className="sm:col-span-3 font-medium text-stone-800 text-sm">
+                      {r.name}
+                    </div>
+
+                    {/* Attendance badge */}
+                    <div className="sm:col-span-2">
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full"
+                        style={{ background: s.bg, color: s.color }}
+                      >
+                        {s.emoji} {s.label}
+                      </span>
+                    </div>
+
+                    {/* Message */}
+                    <div className="sm:col-span-5 text-sm text-stone-500 leading-relaxed">
+                      {r.message ? (
+                        <span className="italic">"{r.message}"</span>
+                      ) : (
+                        <span className="text-stone-300">—</span>
+                      )}
+                    </div>
+
+                    {/* Date */}
+                    <div className="sm:col-span-2 text-xs text-stone-400">
+                      {date
+                        ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : '—'}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-
-          {!loading && !error && responses.length === 0 && (
-            <div style={{ padding: '64px', textAlign: 'center' }}>
-              <p
-                style={{
-                  fontFamily: 'var(--font-serif)',
-                  fontSize: '22px',
-                  color: 'var(--color-on-surface)',
-                  marginBottom: '8px',
-                }}
-              >
-                No responses yet
-              </p>
-              <p style={{ fontFamily: 'var(--font-sans)', color: 'var(--color-neutral)', fontSize: '15px' }}>
-                Share your invitation and RSVPs will appear here.
-              </p>
-            </div>
-          )}
-
-          {!loading && !error && responses.map((response, index) => (
-            <div
-              key={response.id || index}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1.2fr 2fr 1.5fr',
-                padding: '20px 28px',
-                gap: '16px',
-                background: index % 2 === 0 ? 'var(--color-surface-lowest)' : 'var(--color-surface)',
-                alignItems: 'center',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  color: 'var(--color-on-surface)',
-                }}
-              >
-                {response.name}
-              </span>
-
-              <span>
-                <span
-                  style={{
-                    background: attendanceColors[response.attendance],
-                    borderRadius: '12px',
-                    padding: '4px 12px',
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: 'var(--color-on-surface)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {attendanceLabels[response.attendance]}
-                </span>
-              </span>
-
-              <span
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '14px',
-                  color: 'var(--color-neutral)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {response.message || '—'}
-              </span>
-
-              <span
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '13px',
-                  color: 'var(--color-neutral)',
-                }}
-              >
-                {response.created_at
-                  ? new Date(response.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                  : '—'}
-              </span>
-            </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

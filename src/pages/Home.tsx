@@ -1,130 +1,47 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { TEMPLATES } from '../lib/types';
 import TemplateCard from '../components/TemplateCard';
-import { TemplateId } from '../lib/types';
-
-const templates: { id: TemplateId; name: string; description: string }[] = [
-  {
-    id: 'bloom',
-    name: 'Bloom',
-    description: 'Pastel pink & lilac with floral accents and elegant serif typography. Soft and romantic.',
-  },
-  {
-    id: 'confetti',
-    name: 'Confetti',
-    description: 'Playful white base with colorful pastel confetti. Bold and celebratory for a fun wedding.',
-  },
-  {
-    id: 'golden-hour',
-    name: 'Golden Hour',
-    description: 'Warm ivory & peach with a soft gradient. Classic elegance with a sunlit, heirloom feel.',
-  },
-];
 
 export default function Home() {
-  const navigate = useNavigate();
-
-  const handleSelect = (templateId: TemplateId) => {
-    navigate(`/create?template=${templateId}`);
-  };
-
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'var(--color-surface)',
-        padding: '0 0 80px',
-      }}
-    >
+    <div className="min-h-dvh" style={{ background: 'linear-gradient(160deg, #fdf2f8 0%, #fce7f3 30%, #ede9fe 70%, #fdf8f0 100%)' }}>
+      {/* Nav */}
+      <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
+        <span className="script-font text-3xl text-rose-400">Everly</span>
+        <Link to="/dashboard" className="btn-ghost text-sm">
+          View RSVPs →
+        </Link>
+      </nav>
+
       {/* Hero */}
-      <div
-        style={{
-          textAlign: 'center',
-          padding: '72px 24px 56px',
-          background: 'linear-gradient(180deg, var(--color-surface-lowest) 0%, var(--color-surface) 100%)',
-        }}
-      >
-        <p
-          style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: '11px',
-            letterSpacing: '0.25em',
-            textTransform: 'uppercase',
-            color: 'var(--color-primary)',
-            marginBottom: '16px',
-            fontWeight: 600,
-          }}
-        >
-          Wedding Invitations
-        </p>
-        <h1
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: 'clamp(36px, 6vw, 64px)',
-            fontWeight: 700,
-            color: 'var(--color-on-surface)',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.1,
-            marginBottom: '20px',
-            maxWidth: '640px',
-            margin: '0 auto 20px',
-          }}
-        >
-          Your love story, beautifully told
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16 text-center">
+        <div className="inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-medium text-rose-500 tracking-widest uppercase mb-8 shadow-sm border border-rose-100">
+          <span>✦</span>
+          <span>Digital Wedding Invitations</span>
+          <span>✦</span>
+        </div>
+
+        <h1 className="serif-font text-4xl sm:text-5xl lg:text-6xl font-light text-stone-800 leading-tight mb-4 text-balance">
+          Your perfect invitation,
+          <br />
+          <em className="text-rose-400 font-normal">in minutes</em>
         </h1>
-        <p
-          style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: '17px',
-            color: 'var(--color-neutral)',
-            maxWidth: '480px',
-            margin: '0 auto',
-            lineHeight: 1.65,
-          }}
-        >
-          Choose a template and create a stunning digital invitation in minutes. Share it with the world.
+
+        <p className="text-stone-500 text-lg max-w-xl mx-auto leading-relaxed mb-12">
+          Choose a beautiful template, add your details, and share your love story with the world.
         </p>
-      </div>
 
-      {/* Template grid */}
-      <div
-        style={{
-          maxWidth: '1100px',
-          margin: '0 auto',
-          padding: '0 24px',
-        }}
-      >
-        <h2
-          style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: '13px',
-            fontWeight: 600,
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: 'var(--color-neutral)',
-            marginBottom: '32px',
-            textAlign: 'center',
-          }}
-        >
-          Pick your style
-        </h2>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '28px',
-          }}
-        >
-          {templates.map((t) => (
-            <TemplateCard
-              key={t.id}
-              templateId={t.id}
-              name={t.name}
-              description={t.description}
-              onSelect={handleSelect}
-            />
+        {/* Template cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {TEMPLATES.map((template) => (
+            <TemplateCard key={template.id} template={template} />
           ))}
         </div>
+
+        {/* Bottom note */}
+        <p className="mt-12 text-stone-400 text-sm">
+          Free forever · No credit card needed · RSVP tracking included
+        </p>
       </div>
     </div>
   );

@@ -1,24 +1,27 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import InvitationPreview from '../components/InvitationPreview';
-import { InviteData } from '../lib/types';
+import { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import type { InvitationData } from '../lib/types';
+import Bloom from '../templates/Bloom';
+import Confetti from '../templates/Confetti';
+import GoldenHour from '../templates/GoldenHour';
+
+function decodeInvite(id: string): InvitationData | null {
+  try {
+    return JSON.parse(decodeURIComponent(atob(id)));
+  } catch {
+    return null;
+  }
+}
 
 export default function Invite() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [data, setData] = useState<InviteData | null>(null);
   const [copied, setCopied] = useState(false);
-  const [notFound, setNotFound] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    const invites = JSON.parse(localStorage.getItem('wedding-invites') || '{}');
-    if (invites[id]) {
-      setData(invites[id]);
-    } else {
-      setNotFound(true);
-    }
-  }, [id]);
+  if (!id) return <NotFound />;
+
+  const data = decodeInvite(id);
+  if (!data) return <NotFound />;
 
   const handleShare = async () => {
     try {
@@ -26,129 +29,67 @@ export default function Invite() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      setCopied(false);
+      // fallback
     }
   };
 
-  if (notFound) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'var(--color-surface)',
-          padding: '32px',
-          textAlign: 'center',
-          gap: '20px',
-        }}
-      >
-        <h2
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: '32px',
-            color: 'var(--color-on-surface)',
-          }}
-        >
-          Invitation Not Found
-        </h2>
-        <p style={{ fontFamily: 'var(--font-sans)', color: 'var(--color-neutral)', fontSize: '16px' }}>
-          This invitation may have been removed or the link is invalid.
-        </p>
-        <button className="btn-primary" onClick={() => navigate('/')}>
-          Create Your Own
-        </button>
-      </div>
-    );
-  }
+  const TemplateComponent = {
+    bloom: Bloom,
+    confetti: Confetti,
+    'golden-hour': GoldenHour,
+  }[data.template];
 
-  if (!data) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'var(--color-surface)',
-        }}
-      >
-        <div
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            border: '3px solid var(--color-tertiary)',
-            borderTopColor: 'var(--color-primary)',
-            animation: 'spin 0.8s linear infinite',
-          }}
-        />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
+  if (!TemplateComponent) return <NotFound />;
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'var(--color-surface)',
-        padding: '40px 24px 80px',
-      }}
-    >
-      <div style={{ maxWidth: '580px', margin: '0 auto' }}>
-        {/* Invitation */}
-        <div className="fade-in">
-          <InvitationPreview data={data} />
+    <div className="min-h-dvh flex flex-col" style={{ background: 'linear-gradient(160deg, #fdf2f8 0%, #fce7f3 30%, #ede9fe 70%, #fdf8f0 100%)' }}>
+      {/* Header */}
+      <header className="flex items-center justify-between px-5 py-4 max-w-3xl mx-auto w-full">
+        <Link to="/" className="script-font text-2xl text-rose-400">Everly</Link>
+        <Link to={`/create?template=${data.template}`} className="text-xs text-stone-400 hover:text-stone-600 transition-colors">
+          Create yours →
+        </Link>
+      </header>
+
+      {/* Invitation */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md">
+          <div className="overflow-hidden rounded-3xl shadow-2xl" style={{ minHeight: 540 }}>
+            <TemplateComponent data={data} compact={false} />
+          </div>
         </div>
 
-        {/* Actions */}
-        <div
-          style={{
-            marginTop: '32px',
-            display: 'flex',
-            gap: '12px',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
+        {/* Action buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-md">
           <button
-            className="btn-primary"
             onClick={() => navigate(`/rsvp/${id}`)}
+            className="flex-1 btn-primary py-4 text-base font-semibold"
           >
-            RSVP Now
+            RSVP Now 💌
           </button>
-
           <button
-            className="btn-secondary"
             onClick={handleShare}
-            style={{ position: 'relative' }}
+            className={`flex-1 btn-secondary py-4 text-base font-semibold transition-all duration-200 ${copied ? 'bg-green-50 border-green-300 text-green-700' : ''}`}
           >
-            {copied ? 'Link Copied!' : 'Share Invitation'}
+            {copied ? '✓ Link copied!' : 'Share invitation'}
           </button>
         </div>
 
-        {/* Footer note */}
-        <p
-          style={{
-            textAlign: 'center',
-            fontFamily: 'var(--font-sans)',
-            fontSize: '13px',
-            color: 'var(--color-neutral)',
-            marginTop: '40px',
-          }}
-        >
-          Made with{' '}
-          <span
-            style={{ color: 'var(--color-primary)', cursor: 'pointer' }}
-            onClick={() => navigate('/')}
-          >
-            Wedding Invitation
-          </span>
+        <p className="mt-6 text-xs text-stone-400 text-center">
+          Share this page with your guests · Created with Everly
         </p>
-      </div>
+      </main>
+    </div>
+  );
+}
+
+function NotFound() {
+  return (
+    <div className="min-h-dvh flex flex-col items-center justify-center text-center px-4" style={{ background: '#fdf2f8' }}>
+      <span className="text-5xl mb-4">💐</span>
+      <h1 className="serif-font text-2xl text-stone-700 mb-2">Invitation not found</h1>
+      <p className="text-stone-400 mb-6">This link may be expired or incorrect.</p>
+      <Link to="/" className="btn-primary">Go home</Link>
     </div>
   );
 }
